@@ -1,106 +1,148 @@
 ---
-title: 'Development'
-description: 'Preview changes locally to update your docs'
+title: "Set up your environment"
+description: "Preview changes locally to update your docs"
 ---
 
 <Info>
-  **Prerequisite**: Please install Node.js (version 19 or higher) before proceeding. <br />
-  Please upgrade to ```docs.json``` before proceeding and delete the legacy ```mint.json``` file.
+  **Prerequisite**:
+
+  **Before you begin, make sure you have:**
+
+  - [**Node.js**](https://nodejs.org/)** version 20 or higher**
+
+  **We recommend using **                [**nvm**](https://github.com/nvm-sh/nvm)** to manage your Node.js versions**
+
+  - [**pnpm**](https://pnpm.io/installation)** package manager installed**
+  - [**CoinVoyage**](https://console.privy.io/)** Dashboard account for your application**
+  - **Coinvoyage API Key **
 </Info>
 
-Follow these steps to install and run Mintlify on your operating system:
 
-**Step 1**: Install Mintlify:
+Follow these steps to install CoinVoyage:
+
+**Step 1**: Create a new Next.js project with TypeScript
 
 <CodeGroup>
 
-  ```bash npm
-  npm i -g mintlify
-  ```
-
-```bash yarn
-yarn global add mintlify
+```bash bash
+npx create-next-app@latest your-project-name --typescript
+cd your-project-name
 ```
 
 </CodeGroup>
 
-**Step 2**: Navigate to the docs directory (where the `docs.json` file is located) and execute the following command:
+When prompted, select the following options:
+
+- Would you like to use TypeScript? › Yes
+- Would you like to use ESLint? › Yes
+- Would you like to use Tailwind CSS? › Yes
+- Would you like your code inside a src/ directory? › Yes
+- Would you like to use App Router? (recommended) › Yes
+- Would you like to use Turbopack for next dev? › Yes
+- Would you like to customize the import alias (@/\* by default)? › No
+
+**Step 2**: Install required dependencies
 
 ```bash
-mintlify dev
+npm install @coin-voyage/paykit @tanstack/react-query
 ```
 
-A local preview of your documentation will be available at `http://localhost:3000`.
+**Step 3:** Generate your API key from your CoinVoyage dashboard at https://dashboard.coinvoyage.com
 
-### Custom Ports
+**Step 4:** Create a .env.local file in your project root directory
 
-By default, Mintlify uses port 3000. You can customize the port Mintlify runs on by using the `--port` flag. To run Mintlify on port 3333, for instance, use this command:
+**Step 5:** Add your API key to the .env.local file
 
 ```bash
-mintlify dev --port 3333
+NEXT_PUBLIC_COIN_VOYAGE_API_KEY=pk_your_actual_api_key_here
 ```
 
-If you attempt to run Mintlify on a port that's already in use, it will use the next available port:
+**Step 6:** Create a DepositButton component in app/components/DepositButton.tsx with the PayKit integration
 
-```md
-Port 3000 is already in use. Trying 3001 instead.
+```typescript
+
+"use client";
+
+import { PayButton, PayKitProvider, WalletProvider } from "@coin-voyage/paykit";
+import { ChainId } from "@coin-voyage/paykit/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+
+const queryClient = new QueryClient();
+
+export default function DepositButton() {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const envApiKey = process.env.NEXT_PUBLIC_COIN_VOYAGE_API_KEY;
+    setApiKey(envApiKey || "");
+  }, []);
+
+  if (!apiKey) {
+    return <div>Loading payment system...</div>;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WalletProvider>
+        <PayKitProvider apiKey={apiKey}>
+          <PayButton
+            intent="Deposit to SUI"
+            toChain={ChainId.SUI}
+            toAddress="0xYourWalletAddress" // Replace with your SUI wallet address
+            toAmount={10}
+            style={{ width: "100%", borderRadius: "0.375rem" }}
+            onPaymentStarted={(event) => {
+              console.log("Payment is being processed");
+            }}
+            onPaymentCompleted={(event) => {
+              console.log("Payment Completed");
+            }}
+          />
+        </PayKitProvider>
+      </WalletProvider>
+    </QueryClientProvider>
+  );
+}
 ```
 
-## Mintlify Versions
+**Step 7:** Import and use the DepositButton component in your main page (app/page.tsx)
 
-Please note that each CLI release is associated with a specific version of Mintlify. If your local website doesn't align with the production version, please update the CLI:
+```typescript
+import DepositButton from "./components/DepositButton";
 
-<CodeGroup>
-
-```bash npm
-npm i -g mintlify@latest
+export default function Home() {
+  return (
+    <main>
+      <h1>CoinVoyage Payment Demo</h1>
+      <DepositButton />
+    </main>
+  );
+}
 ```
 
-```bash yarn
-yarn global upgrade mintlify
-```
+**Step 8:** Replace "0xYourWalletAddress" with your actual SUI wallet address in the DepositButton component
 
-</CodeGroup>
-
-## Validating Links
-
-The CLI can assist with validating reference links made in your documentation. To identify any broken links, use the following command:
+**Step 9:** Restart your development server completely
 
 ```bash
-mintlify broken-links
+npm run dev
 ```
 
-## Deployment
-
-<Tip>
-  Unlimited editors available under the [Pro
-  Plan](https://mintlify.com/pricing) and above.
-</Tip>
-
-If the deployment is successful, you should see the following:
-
-<Frame>
-  <img src="/images/checks-passed.png" style={{ borderRadius: '0.5rem' }} />
-</Frame>
-
-## Code Formatting
-
-We suggest using extensions on your IDE to recognize and format MDX. If you're a VSCode user, consider the [MDX VSCode extension](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx) for syntax highlighting, and [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting.
+## 
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title='Error: Could not load the "sharp" module using the darwin-arm64 runtime'>
-
     This may be due to an outdated version of node. Try the following:
+
     1. Remove the currently-installed version of mintlify: `npm remove -g mintlify`
     2. Upgrade to Node v19 or higher.
     3. Reinstall mintlify: `npm install -g mintlify`
   </Accordion>
-
   <Accordion title="Issue: Encountering an unknown error">
-  
-    Solution: Go to the root of your device and delete the \~/.mintlify folder. Afterwards, run `mintlify dev` again.
+    Solution: Go to the root of your device and delete the ~/.mintlify folder. Afterwards, run `mintlify dev` again.
   </Accordion>
 </AccordionGroup>
 
